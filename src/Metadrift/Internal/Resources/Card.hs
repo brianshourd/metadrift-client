@@ -9,8 +9,10 @@ import           Control.Monad (mapM)
 import qualified Data.Lens.Common as Lens
 import qualified Data.Map.Strict as Map
 import qualified Data.Text as T
+import qualified Data.Time.Clock as Clock
 import qualified Data.Yaml as Yaml
 import           GHC.Generics (Generic)
+import qualified Metadrift.Internal.Service.ProjectedCompletionDates as Service.ProjectedCompletionDates
 import qualified Metadrift.Internal.Resources.Support as Support
 import qualified Metadrift.Internal.Service as Service
 import qualified Metadrift.Internal.Service.Card as Service.Card
@@ -283,7 +285,10 @@ makeSummary Service.Card.T
 doCommand :: Service.Config -> Command -> IO ExitCode
 doCommand config ProjectedCompletionDates = do
   results <- HTTP.getResponseBody <$> Service.projectedCompletionDates config
-  Support.printBodies results
+  today <- Clock.getCurrentTime
+  let sorted = List.sortOn (Service.ProjectedCompletionDates.priority today) results
+  mapM_ (putStrLn . Service.ProjectedCompletionDates.prettyPrint today) sorted
+  return ExitSuccess
 doCommand config (Load filepath) = do
   results <- Yaml.decodeFile filepath :: IO (Maybe [Service.Card.T])
   case results of
